@@ -530,10 +530,10 @@ function startVideoCall(peerId) {
 
   console.log("📹 Starting video call to:", peerId);
   const call = state.peer.call(peerId, elements.video.srcObject);
-  
+
   if (call) {
     state.mediaConnection = call;
-    
+
     call.on("stream", (remoteStream) => {
       console.log("📹 Received remote stream");
       state.opponentStream = remoteStream;
@@ -578,7 +578,7 @@ function answerVideoCall(call) {
 function displayOpponentVideo(stream) {
   const opponentContainer = document.getElementById("video-container-right");
   const opponentDisplay = document.getElementById("opponent-display");
-  
+
   // Hide the emoji display
   if (opponentDisplay) {
     opponentDisplay.classList.add("hidden");
@@ -592,17 +592,22 @@ function displayOpponentVideo(stream) {
     opponentVideo.autoplay = true;
     opponentVideo.playsInline = true;
     opponentVideo.muted = true; // Muted to avoid echo
-    opponentVideo.style.cssText = "width:100%;height:100%;object-fit:cover;transform:scaleX(-1);";
+    opponentVideo.style.cssText =
+      "width:100%;height:100%;object-fit:cover;transform:scaleX(-1);";
     opponentContainer.insertBefore(opponentVideo, opponentContainer.firstChild);
   }
 
   opponentVideo.srcObject = stream;
-  opponentVideo.play().catch(e => console.log("Video play error:", e));
+  opponentVideo.play().catch((e) => console.log("Video play error:", e));
 }
 
 function checkBothReady() {
-  console.log("Checking ready state:", { isReady: state.isReady, opponentReady: state.opponentReady, isHost: state.isHost });
-  
+  console.log("Checking ready state:", {
+    isReady: state.isReady,
+    opponentReady: state.opponentReady,
+    isHost: state.isHost,
+  });
+
   if (state.isReady && state.opponentReady && state.isHost) {
     console.log("🎮 Both players ready! Starting game...");
     showToast("Both players ready!", "success");
@@ -1747,7 +1752,7 @@ async function testWebRTCConnectivity() {
   try {
     // Create a test RTCPeerConnection
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
 
     // Create a data channel to trigger ICE gathering
@@ -1759,7 +1764,7 @@ async function testWebRTCConnectivity() {
     // Wait for ICE candidates
     const result = await new Promise((resolve) => {
       let hasCandidate = false;
-      
+
       pc.onicecandidate = (e) => {
         if (e.candidate) {
           hasCandidate = true;
@@ -1776,7 +1781,10 @@ async function testWebRTCConnectivity() {
       pc.onicegatheringstatechange = () => {
         if (pc.iceGatheringState === "complete") {
           if (hasCandidate) {
-            resolve({ success: true, type: "Host candidates only (may have issues)" });
+            resolve({
+              success: true,
+              type: "Host candidates only (may have issues)",
+            });
           } else {
             resolve({ success: false, type: "No candidates found" });
           }
