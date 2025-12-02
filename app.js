@@ -300,12 +300,27 @@ function initPeer() {
         // Generate a short room code
         const roomCode = generateRoomCode();
         
+        console.log('🔄 Creating room with code:', roomCode);
+        
+        // Destroy existing peer if any
+        if (state.peer) {
+            state.peer.destroy();
+            state.peer = null;
+        }
+        
         state.peer = new Peer(roomCode, {
-            debug: 1
+            debug: 2,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            }
         });
         
         state.peer.on('open', (id) => {
-            console.log('📡 Peer connected with ID:', id);
+            console.log('📡 Room created with ID:', id);
             state.peerId = id;
             resolve(id);
         });
@@ -313,6 +328,13 @@ function initPeer() {
         state.peer.on('connection', (conn) => {
             console.log('🤝 Incoming connection from:', conn.peer);
             handleConnection(conn);
+        });
+        
+        state.peer.on('disconnected', () => {
+            console.log('Peer disconnected, attempting reconnect...');
+            if (state.peer && !state.peer.destroyed) {
+                state.peer.reconnect();
+            }
         });
         
         state.peer.on('error', (err) => {
@@ -330,35 +352,81 @@ function initPeer() {
 
 function connectToPeer(peerId) {
     return new Promise((resolve, reject) => {
-        if (!state.peer) {
-            state.peer = new Peer({
-                debug: 1
-            });
+        let isResolved = false;
+        
+        // Create a new peer for the joiner
+        console.log('🔄 Creating peer for joining...');
+        
+        // Destroy existing peer if any
+        if (state.peer) {
+            state.peer.destroy();
+            state.peer = null;
         }
         
-        state.peer.on('open', () => {
-            console.log('📡 Connecting to peer:', peerId);
-            const conn = state.peer.connect(peerId, {
-                reliable: true
+        state.peer = new Peer({
+            debug: 2,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            }
+        });
+        
+        state.peer.on('open', (myId) => {
+            console.log('📡 My peer ID:', myId);
+            console.log('📡 Connecting to host:', peerId);
+            
+            const conn = state.peer.connect(peerId.toUpperCase(), {
+                reliable: true,
+                serialization: 'json'
             });
             
             conn.on('open', () => {
-                handleConnection(conn);
-                resolve(conn);
+                if (!isResolved) {
+                    isResolved = true;
+                    console.log('✅ Connection opened!');
+                    handleConnection(conn);
+                    resolve(conn);
+                }
             });
             
-            conn.on('error', reject);
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
+                if (!isResolved) {
+                    isResolved = true;
+                    reject(err);
+                }
+            });
         });
         
         state.peer.on('error', (err) => {
-            console.error('Connection error:', err);
-            reject(err);
+            console.error('Peer error:', err);
+            if (!isResolved) {
+                isResolved = true;
+                if (err.type === 'peer-unavailable') {
+                    reject(new Error('Room not found. Check the code.'));
+                } else {
+                    reject(err);
+                }
+            }
+        });
+        
+        state.peer.on('disconnected', () => {
+            console.log('Peer disconnected, attempting reconnect...');
+            if (state.peer && !state.peer.destroyed) {
+                state.peer.reconnect();
+            }
         });
         
         // Timeout
         setTimeout(() => {
-            reject(new Error('Connection timeout'));
-        }, 10000);
+            if (!isResolved) {
+                isResolved = true;
+                reject(new Error('Connection timeout. Room may not exist.'));
+            }
+        }, 15000);
     });
 }
 
@@ -579,15 +647,18 @@ async function connectToRoom() {
     
     state.gameMode = 'join';
     state.isHost = false;
-    elements.joinStatus.textContent = 'Connecting...';
-    elements.joinStatus.classList.remove('error');
+    elements.joinStatus.textContent = 'Starting camera...';
+    elements.joinStatus.classList.remove('error', 'success');
     elements.btnConnect.disabled = true;
     
     try {
         await startCamera();
+        
+        elements.joinStatus.textContent = 'Connecting to room ' + code + '...';
+        
         await connectToPeer(code);
         
-        elements.joinStatus.textContent = 'Connected!';
+        elements.joinStatus.textContent = 'Connected! Starting game...';
         elements.joinStatus.classList.add('success');
         
         // Wait for host to start game
@@ -595,10 +666,17 @@ async function connectToRoom() {
             showGameScreen();
         }, 500);
     } catch (error) {
-        elements.joinStatus.textContent = 'Failed to connect. Check the code.';
+        console.error('Join error:', error);
+        elements.joinStatus.textContent = error.message || 'Failed to connect. Check the code.';
         elements.joinStatus.classList.add('error');
         elements.btnConnect.disabled = false;
         stopCamera();
+        
+        // Clean up peer
+        if (state.peer) {
+            state.peer.destroy();
+            state.peer = null;
+        }
     }
 }
 
