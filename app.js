@@ -353,9 +353,11 @@ function initPeer() {
 function connectToPeer(peerId) {
     return new Promise((resolve, reject) => {
         let isResolved = false;
+        const targetId = peerId.toUpperCase().trim();
         
         // Create a new peer for the joiner
         console.log('🔄 Creating peer for joining...');
+        console.log('🎯 Target room:', targetId);
         
         // Destroy existing peer if any
         if (state.peer) {
@@ -369,27 +371,47 @@ function connectToPeer(peerId) {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
                 ]
             }
         });
         
         state.peer.on('open', (myId) => {
             console.log('📡 My peer ID:', myId);
-            console.log('📡 Connecting to host:', peerId);
+            console.log('📡 Attempting connection to:', targetId);
             
-            const conn = state.peer.connect(peerId.toUpperCase(), {
+            const conn = state.peer.connect(targetId, {
                 reliable: true,
                 serialization: 'json'
             });
             
+            // Set up data handler immediately
+            conn.on('data', (data) => {
+                console.log('📨 Received data:', data.type);
+                handleMessage(data);
+            });
+            
             conn.on('open', () => {
+                console.log('✅ Joiner: Connection opened!');
                 if (!isResolved) {
                     isResolved = true;
-                    console.log('✅ Connection opened!');
-                    handleConnection(conn);
+                    state.connection = conn;
+                    
+                    // Send player info immediately
+                    console.log('📤 Sending player info...');
+                    conn.send({
+                        type: 'player_info',
+                        name: state.playerName
+                    });
+                    
                     resolve(conn);
                 }
+            });
+            
+            conn.on('close', () => {
+                console.log('❌ Connection closed');
+                handleDisconnect();
             });
             
             conn.on('error', (err) => {
@@ -402,39 +424,43 @@ function connectToPeer(peerId) {
         });
         
         state.peer.on('error', (err) => {
-            console.error('Peer error:', err);
+            console.error('Peer error:', err.type, err);
             if (!isResolved) {
                 isResolved = true;
                 if (err.type === 'peer-unavailable') {
                     reject(new Error('Room not found. Check the code.'));
+                } else if (err.type === 'network') {
+                    reject(new Error('Network error. Check your connection.'));
+                } else if (err.type === 'server-error') {
+                    reject(new Error('Server error. Try again.'));
                 } else {
-                    reject(err);
+                    reject(new Error(err.message || 'Connection failed.'));
                 }
             }
         });
         
         state.peer.on('disconnected', () => {
-            console.log('Peer disconnected, attempting reconnect...');
-            if (state.peer && !state.peer.destroyed) {
-                state.peer.reconnect();
-            }
+            console.log('Peer disconnected from server...');
         });
         
         // Timeout
         setTimeout(() => {
             if (!isResolved) {
                 isResolved = true;
-                reject(new Error('Connection timeout. Room may not exist.'));
+                console.log('⏰ Connection timeout after 20 seconds');
+                reject(new Error('Connection timeout. Room may not exist or host left.'));
             }
-        }, 15000);
+        }, 20000);
     });
 }
 
 function handleConnection(conn) {
+    console.log('🔗 handleConnection called, connection open:', conn.open);
     state.connection = conn;
     
-    conn.on('open', () => {
-        console.log('✅ Connection established!');
+    // Function to run when connection is ready
+    const onConnectionReady = () => {
+        console.log('✅ Connection established and ready!');
         
         // Send player info
         sendMessage({
@@ -452,9 +478,17 @@ function handleConnection(conn) {
                 startGame();
             }, 1000);
         }
-    });
+    };
+    
+    // Check if connection is already open
+    if (conn.open) {
+        onConnectionReady();
+    } else {
+        conn.on('open', onConnectionReady);
+    }
     
     conn.on('data', (data) => {
+        console.log('📨 Received data:', data.type);
         handleMessage(data);
     });
     
