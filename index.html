@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmotionLens Arena - Multiplayer Emotion Battle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loader-content">
+            <div class="loader-ring">
+                <div class="loader-ring-inner"></div>
+            </div>
+            <h2 class="loader-title">EMOTIONLENS</h2>
+            <p class="loader-subtitle">ARENA</p>
+            <p class="loader-status" id="loader-status">Initializing AI Models...</p>
+            <div class="loader-progress">
+                <div class="loader-progress-bar" id="loader-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobby-screen" class="lobby-screen hidden">
+        <div class="lobby-container">
+            <div class="lobby-header">
+                <div class="logo-large">
+                    <div class="logo-icon-large">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="10" r="3"/>
+                            <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
+                        </svg>
+                    </div>
+                    <h1 class="logo-title">EMOTIONLENS</h1>
+                    <span class="logo-subtitle">ARENA</span>
+                </div>
+                <p class="lobby-tagline">Battle your emotions. Match to win.</p>
+            </div>
+
+            <!-- Mode Selection -->
+            <div class="mode-selection" id="mode-selection">
+                <button class="mode-btn" id="btn-solo-mode">
+                    <div class="mode-icon">👤</div>
+                    <div class="mode-info">
+                        <span class="mode-title">Solo Practice</span>
+                        <span class="mode-desc">Practice matching emotions alone</span>
+                    </div>
+                </button>
+                
+                <button class="mode-btn" id="btn-create-room">
+                    <div class="mode-icon">🎮</div>
+                    <div class="mode-info">
+                        <span class="mode-title">Create Room</span>
+                        <span class="mode-desc">Host a game and invite a friend</span>
+                    </div>
+                </button>
+                
+                <button class="mode-btn" id="btn-join-room">
+                    <div class="mode-icon">🚀</div>
+                    <div class="mode-info">
+                        <span class="mode-title">Join Room</span>
+                        <span class="mode-desc">Enter a room code to play</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Create Room Panel -->
+            <div class="room-panel hidden" id="create-panel">
+                <h3>Your Room Code</h3>
+                <div class="room-code-display">
+                    <span id="room-code-value">------</span>
+                    <button class="btn-copy" id="btn-copy-code" title="Copy code">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="room-status" id="create-status">Waiting for opponent to join...</p>
+                <div class="waiting-animation">
+                    <span></span><span></span><span></span>
+                </div>
+                <button class="btn-secondary" id="btn-cancel-create">Cancel</button>
+            </div>
+
+            <!-- Join Room Panel -->
+            <div class="room-panel hidden" id="join-panel">
+                <h3>Enter Room Code</h3>
+                <div class="room-code-input">
+                    <input type="text" id="join-code-input" maxlength="6" placeholder="XXXXXX" autocomplete="off">
+                </div>
+                <p class="room-status" id="join-status"></p>
+                <div class="room-actions">
+                    <button class="btn-secondary" id="btn-cancel-join">Cancel</button>
+                    <button class="btn-primary" id="btn-connect">Connect</button>
+                </div>
+            </div>
+
+            <!-- Player Name -->
+            <div class="player-name-section">
+                <label>Your Name</label>
+                <input type="text" id="player-name" maxlength="12" placeholder="Player" value="">
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-screen hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="10" r="3"/>
+                            <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
+                        </svg>
+                    </div>
+                    <span class="logo-text">ARENA</span>
+                </div>
+            </div>
+            <div class="header-center">
+                <!-- Scoreboard -->
+                <div class="scoreboard" id="scoreboard">
+                    <div class="score-player score-left">
+                        <span class="score-name" id="score-name-left">You</span>
+                        <span class="score-value" id="score-left">0</span>
+                    </div>
+                    <div class="score-divider">VS</div>
+                    <div class="score-player score-right">
+                        <span class="score-value" id="score-right">0</span>
+                        <span class="score-name" id="score-name-right">Opponent</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="round-info">
+                    <span class="round-label">ROUND</span>
+                    <span class="round-value" id="round-value">1</span>
+                </div>
+                <button class="btn-leave" id="btn-leave" title="Leave Game">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Challenge Display -->
+        <div class="challenge-container" id="challenge-container">
+            <div class="challenge-content">
+                <div class="challenge-label">MATCH THIS EMOTION</div>
+                <div class="challenge-emoji" id="challenge-emoji">😊</div>
+                <div class="challenge-name" id="challenge-name">HAPPY</div>
+                <div class="challenge-target">First to <span id="target-percent">80</span>% wins!</div>
+            </div>
+            <div class="challenge-timer" id="challenge-timer">
+                <svg viewBox="0 0 36 36">
+                    <path class="timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="timer-progress" id="timer-progress" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                </svg>
+                <span class="timer-value" id="timer-value">15</span>
+            </div>
+        </div>
+
+        <!-- Main Game Area -->
+        <main class="game-content">
+            <!-- Left Player (You) -->
+            <div class="player-section player-left">
+                <div class="player-header">
+                    <span class="player-name" id="player-left-name">You</span>
+                    <span class="player-status ready" id="player-left-status">READY</span>
+                </div>
+                <div class="video-container" id="video-container-left">
+                    <video id="video" autoplay muted playsinline></video>
+                    <canvas id="overlay-canvas"></canvas>
+                    
+                    <!-- HUD Corners -->
+                    <div class="hud-corner hud-corner-tl"></div>
+                    <div class="hud-corner hud-corner-tr"></div>
+                    <div class="hud-corner hud-corner-bl"></div>
+                    <div class="hud-corner hud-corner-br"></div>
+                    
+                    <!-- Progress Ring -->
+                    <div class="emotion-progress-ring" id="progress-ring-left">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="45"/>
+                            <circle class="ring-progress" id="ring-left" cx="50" cy="50" r="45"/>
+                        </svg>
+                        <span class="ring-value" id="ring-value-left">0%</span>
+                    </div>
+                    
+                    <!-- Winner Badge -->
+                    <div class="winner-badge hidden" id="winner-badge-left">
+                        <span>🏆 WINNER!</span>
+                    </div>
+                </div>
+                <div class="emotion-bar-container">
+                    <div class="emotion-bar-track">
+                        <div class="emotion-bar-fill" id="emotion-bar-left"></div>
+                    </div>
+                    <span class="emotion-bar-value" id="emotion-value-left">0%</span>
+                </div>
+            </div>
+
+            <!-- Center Divider -->
+            <div class="game-divider">
+                <div class="divider-line"></div>
+                <div class="divider-vs">VS</div>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Right Player (Opponent) -->
+            <div class="player-section player-right">
+                <div class="player-header">
+                    <span class="player-status" id="player-right-status">WAITING</span>
+                    <span class="player-name" id="player-right-name">Opponent</span>
+                </div>
+                <div class="video-container video-container-opponent" id="video-container-right">
+                    <!-- Opponent's emotion progress shown here -->
+                    <div class="opponent-display" id="opponent-display">
+                        <div class="opponent-emoji" id="opponent-emoji">😐</div>
+                        <div class="opponent-info">
+                            <span class="opponent-emotion" id="opponent-emotion">Waiting...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- HUD Corners -->
+                    <div class="hud-corner hud-corner-tl"></div>
+                    <div class="hud-corner hud-corner-tr"></div>
+                    <div class="hud-corner hud-corner-bl"></div>
+                    <div class="hud-corner hud-corner-br"></div>
+                    
+                    <!-- Progress Ring -->
+                    <div class="emotion-progress-ring" id="progress-ring-right">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="45"/>
+                            <circle class="ring-progress" id="ring-right" cx="50" cy="50" r="45"/>
+                        </svg>
+                        <span class="ring-value" id="ring-value-right">0%</span>
+                    </div>
+                    
+                    <!-- Winner Badge -->
+                    <div class="winner-badge hidden" id="winner-badge-right">
+                        <span>🏆 WINNER!</span>
+                    </div>
+                </div>
+                <div class="emotion-bar-container">
+                    <div class="emotion-bar-track">
+                        <div class="emotion-bar-fill" id="emotion-bar-right"></div>
+                    </div>
+                    <span class="emotion-bar-value" id="emotion-value-right">0%</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Round Result Overlay -->
+        <div class="round-result hidden" id="round-result">
+            <div class="result-content">
+                <div class="result-emoji" id="result-emoji">🎉</div>
+                <div class="result-text" id="result-text">You Win!</div>
+                <div class="result-subtext" id="result-subtext">Get ready for the next round...</div>
+            </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div class="game-over hidden" id="game-over">
+            <div class="game-over-content">
+                <div class="game-over-trophy" id="game-over-trophy">🏆</div>
+                <h2 class="game-over-title" id="game-over-title">VICTORY!</h2>
+                <div class="game-over-score">
+                    <span id="final-score-left">0</span>
+                    <span class="score-separator">-</span>
+                    <span id="final-score-right">0</span>
+                </div>
+                <p class="game-over-message" id="game-over-message">Congratulations!</p>
+                <div class="game-over-actions">
+                    <button class="btn-primary" id="btn-play-again">Play Again</button>
+                    <button class="btn-secondary" id="btn-back-lobby">Back to Lobby</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Countdown Overlay -->
+        <div class="countdown-overlay hidden" id="countdown-overlay">
+            <div class="countdown-number" id="countdown-number">3</div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script defer src="app.js"></script>
+</body>
+</html>
