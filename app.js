@@ -40,6 +40,7 @@ const state = {
     isModelLoaded: false,
     isVideoPlaying: false,
     isDetecting: false,
+    cameraPermissionGranted: false,
     
     // Game mode
     gameMode: null, // 'solo', 'host', 'join'
@@ -314,7 +315,22 @@ function initPeer() {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    // Free TURN servers for NAT traversal
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
                 ]
             }
         });
@@ -371,8 +387,22 @@ function connectToPeer(peerId) {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:global.stun.twilio.com:3478' }
+                    // Free TURN servers for NAT traversal
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
                 ]
             }
         });
@@ -592,7 +622,7 @@ function generateRoomCode() {
 // ============================================
 // SCREENS
 // ============================================
-function showLobby() {
+async function showLobby() {
     elements.loadingScreen.classList.add('hidden');
     elements.lobbyScreen.classList.remove('hidden');
     elements.gameScreen.classList.add('hidden');
@@ -601,6 +631,30 @@ function showLobby() {
     elements.modeSelection.classList.remove('hidden');
     elements.createPanel.classList.add('hidden');
     elements.joinPanel.classList.add('hidden');
+    
+    // Request camera permission early
+    if (!state.cameraPermissionGranted) {
+        try {
+            await requestCameraPermission();
+        } catch (err) {
+            console.log('Camera permission not granted yet');
+        }
+    }
+}
+
+async function requestCameraPermission() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        // Stop the stream immediately, we just wanted permission
+        stream.getTracks().forEach(track => track.stop());
+        state.cameraPermissionGranted = true;
+        console.log('📷 Camera permission granted');
+        return true;
+    } catch (error) {
+        console.warn('📷 Camera permission denied or error:', error.message);
+        showToast('Camera access needed to play!', 'error');
+        return false;
+    }
 }
 
 function showError(message) {
