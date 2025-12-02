@@ -560,6 +560,10 @@ body {
     z-index: 100;
 }
 
+.header-center {
+    position: static;
+}
+
 .header::after {
     content: '';
     position: absolute;
@@ -601,11 +605,15 @@ body {
 .scoreboard {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-lg);
     padding: var(--space-sm) var(--space-xl);
     background: var(--bg-tertiary);
     border-radius: var(--radius-full);
     border: 1px solid var(--border-color);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .score-player {
@@ -697,8 +705,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-sm) var(--space-lg);
-    background: linear-gradient(180deg, var(--bg-secondary) 0%, transparent 100%);
+    padding: var(--space-lg) var(--space-lg) var(--space-sm);
+    background: transparent;
 }
 
 .challenge-content {
@@ -1265,8 +1273,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(20px);
     z-index: 250;
 }
 
@@ -1275,8 +1283,23 @@ body {
     font-size: 10rem;
     font-weight: 700;
     color: var(--primary);
-    text-shadow: 0 0 50px var(--primary-glow);
+    text-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
     animation: countdownPop 1s ease-in-out;
+}
+
+@keyframes countdownPop {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* Toast Notifications */
@@ -1396,21 +1419,6 @@ body {
     50% { transform: translateY(-15px); }
 }
 
-@keyframes countdownPop {
-    0% {
-        transform: scale(0.5);
-        opacity: 0;
-    }
-    50% {
-        transform: scale(1.2);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
 @keyframes glow {
     0%, 100% { box-shadow: 0 0 5px var(--primary-dim); }
     50% { box-shadow: 0 0 20px var(--primary-glow); }
@@ -1440,12 +1448,18 @@ body {
         aspect-ratio: 4/3;
     }
     
+    .player-section {
+        width: 100%;
+    }
+    
     .game-divider {
+        display: flex;
         flex-direction: row;
         justify-content: center;
         align-items: center;
         padding: var(--space-sm) 0;
         width: 100%;
+        margin: 0 auto;
     }
     
     .divider-line {
@@ -1456,6 +1470,7 @@ body {
     
     .divider-vs {
         flex-shrink: 0;
+        margin: 0 var(--space-md);
     }
     
     .challenge-container {
@@ -1465,6 +1480,12 @@ body {
     
     .challenge-emoji {
         font-size: 2.5rem;
+    }
+    
+    .scoreboard {
+        position: relative;
+        left: auto;
+        transform: none;
     }
 }
 
