@@ -473,8 +473,9 @@ function handleConnection(conn) {
             elements.createStatus.classList.add('success');
             showToast('Opponent connected!', 'success');
             
-            // Start game after brief delay
+            // Transition to game screen and start game
             setTimeout(() => {
+                showGameScreen();  // Host also needs to go to game screen!
                 startGame();
             }, 1000);
         }
@@ -519,11 +520,18 @@ function handleMessage(data) {
             
         case 'game_start':
             if (!state.isHost) {
+                console.log('📥 Received game_start from host');
+                state.isGameActive = true;
                 state.currentRound = data.round;
                 state.currentEmotion = data.emotion;
                 state.myScore = data.scores.joiner;
                 state.opponentScore = data.scores.host;
-                startRound();
+                updateScores();
+                
+                // Show countdown then start round (same as host)
+                showCountdown(() => {
+                    startRound();
+                });
             }
             break;
             
@@ -537,9 +545,10 @@ function handleMessage(data) {
             
         case 'next_round':
             if (!state.isHost) {
+                console.log('📥 Received next_round from host');
                 state.currentRound = data.round;
                 state.currentEmotion = data.emotion;
-                startRound();
+                startRound();  // No countdown between rounds, just start
             }
             break;
             
