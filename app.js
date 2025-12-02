@@ -54,6 +54,10 @@ const state = {
   peer: null,
   connection: null,
   peerId: null,
+  mediaConnection: null,
+  opponentStream: null,
+  isReady: false,
+  opponentReady: false,
 
   // Game state
   isGameActive: false,
@@ -328,6 +332,12 @@ function initPeer() {
       handleConnection(conn);
     });
 
+    // Handle incoming video calls
+    state.peer.on("call", (call) => {
+      console.log("📹 Incoming video call from:", call.peer);
+      answerVideoCall(call);
+    });
+
     state.peer.on("disconnected", () => {
       console.log("Peer disconnected, attempting reconnect...");
       if (state.peer && !state.peer.destroyed) {
@@ -434,6 +444,12 @@ function connectToPeer(peerId) {
       console.log("Peer disconnected from server...");
     });
 
+    // Handle incoming video calls (joiner receives call from host)
+    state.peer.on("call", (call) => {
+      console.log("📹 Incoming video call from host:", call.peer);
+      answerVideoCall(call);
+    });
+
     // Timeout
     setTimeout(() => {
       if (!isResolved) {
@@ -462,14 +478,20 @@ function handleConnection(conn) {
     });
 
     if (state.isHost) {
-      elements.createStatus.textContent = "Opponent connected!";
+      elements.createStatus.textContent = "Opponent connected! Setting up...";
       elements.createStatus.classList.add("success");
       showToast("Opponent connected!", "success");
 
-      // Transition to game screen and start game
+      // Start video call to opponent
+      startVideoCall(conn.peer);
+
+      // Go to game screen but wait for opponent to be ready
       setTimeout(() => {
-        showGameScreen(); // Host also needs to go to game screen!
-        startGame();
+        showGameScreen();
+        // Send ready signal and wait for opponent
+        state.isReady = true;
+        sendMessage({ type: "ready" });
+        checkBothReady();
       }, 1000);
     }
   };
@@ -497,6 +519,97 @@ function handleConnection(conn) {
   });
 }
 
+// ============================================
+// VIDEO CALLING
+// ============================================
+function startVideoCall(peerId) {
+  if (!state.isVideoPlaying || !elements.video.srcObject) {
+    console.warn("Video not ready for call");
+    return;
+  }
+
+  console.log("📹 Starting video call to:", peerId);
+  const call = state.peer.call(peerId, elements.video.srcObject);
+  
+  if (call) {
+    state.mediaConnection = call;
+    
+    call.on("stream", (remoteStream) => {
+      console.log("📹 Received remote stream");
+      state.opponentStream = remoteStream;
+      displayOpponentVideo(remoteStream);
+    });
+
+    call.on("close", () => {
+      console.log("📹 Video call closed");
+    });
+
+    call.on("error", (err) => {
+      console.error("📹 Video call error:", err);
+    });
+  }
+}
+
+function answerVideoCall(call) {
+  if (!state.isVideoPlaying || !elements.video.srcObject) {
+    console.warn("Video not ready to answer call");
+    return;
+  }
+
+  console.log("📹 Answering video call");
+  call.answer(elements.video.srcObject);
+  state.mediaConnection = call;
+
+  call.on("stream", (remoteStream) => {
+    console.log("📹 Received remote stream from host");
+    state.opponentStream = remoteStream;
+    displayOpponentVideo(remoteStream);
+  });
+
+  call.on("close", () => {
+    console.log("📹 Video call closed");
+  });
+
+  call.on("error", (err) => {
+    console.error("📹 Video call error:", err);
+  });
+}
+
+function displayOpponentVideo(stream) {
+  const opponentContainer = document.getElementById("video-container-right");
+  const opponentDisplay = document.getElementById("opponent-display");
+  
+  // Hide the emoji display
+  if (opponentDisplay) {
+    opponentDisplay.classList.add("hidden");
+  }
+
+  // Create or get opponent video element
+  let opponentVideo = document.getElementById("opponent-video");
+  if (!opponentVideo) {
+    opponentVideo = document.createElement("video");
+    opponentVideo.id = "opponent-video";
+    opponentVideo.autoplay = true;
+    opponentVideo.playsInline = true;
+    opponentVideo.muted = true; // Muted to avoid echo
+    opponentVideo.style.cssText = "width:100%;height:100%;object-fit:cover;transform:scaleX(-1);";
+    opponentContainer.insertBefore(opponentVideo, opponentContainer.firstChild);
+  }
+
+  opponentVideo.srcObject = stream;
+  opponentVideo.play().catch(e => console.log("Video play error:", e));
+}
+
+function checkBothReady() {
+  console.log("Checking ready state:", { isReady: state.isReady, opponentReady: state.opponentReady, isHost: state.isHost });
+  
+  if (state.isReady && state.opponentReady && state.isHost) {
+    console.log("🎮 Both players ready! Starting game...");
+    showToast("Both players ready!", "success");
+    startGame();
+  }
+}
+
 function sendMessage(data) {
   if (state.connection && state.connection.open) {
     state.connection.send(data);
@@ -509,6 +622,12 @@ function handleMessage(data) {
       state.opponentName = data.name;
       elements.playerRightName.textContent = data.name;
       elements.scoreNameRight.textContent = data.name;
+      break;
+
+    case "ready":
+      console.log("📥 Opponent is ready!");
+      state.opponentReady = true;
+      checkBothReady();
       break;
 
     case "game_start":
@@ -559,7 +678,7 @@ function handleMessage(data) {
         state.opponentScore = data.scores.host;
         updateScores();
         elements.roundResult.classList.add("hidden");
-        
+
         const winner = data.winner === "joiner" ? "me" : "opponent";
         showGameOver(winner);
       }
@@ -737,12 +856,16 @@ async function connectToRoom() {
 
     await connectToPeer(code);
 
-    elements.joinStatus.textContent = "Connected! Starting game...";
+    elements.joinStatus.textContent = "Connected! Waiting for host...";
     elements.joinStatus.classList.add("success");
 
-    // Wait for host to start game
+    // Go to game screen and signal ready
     setTimeout(() => {
       showGameScreen();
+      // Signal that we're ready
+      state.isReady = true;
+      sendMessage({ type: "ready" });
+      console.log("📤 Sent ready signal to host");
     }, 500);
   } catch (error) {
     console.error("Join error:", error);
@@ -1160,6 +1283,11 @@ function backToLobby() {
   stopGame();
   stopCamera();
 
+  if (state.mediaConnection) {
+    state.mediaConnection.close();
+    state.mediaConnection = null;
+  }
+
   if (state.connection) {
     sendMessage({ type: "leave" });
     state.connection.close();
@@ -1171,9 +1299,23 @@ function backToLobby() {
     state.peer = null;
   }
 
+  // Reset all state
   state.gameMode = null;
   state.isHost = false;
+  state.isReady = false;
+  state.opponentReady = false;
+  state.opponentStream = null;
   elements.gameOver.classList.add("hidden");
+
+  // Remove opponent video if exists
+  const opponentVideo = document.getElementById("opponent-video");
+  if (opponentVideo) {
+    opponentVideo.remove();
+  }
+  const opponentDisplay = document.getElementById("opponent-display");
+  if (opponentDisplay) {
+    opponentDisplay.classList.remove("hidden");
+  }
 
   showLobby();
 }
@@ -1471,6 +1613,11 @@ function initDiagnostics() {
   btnTestCamera.addEventListener("click", testCamera);
   btnTestPeer.addEventListener("click", testPeerConnection);
   btnRunAll.addEventListener("click", runAllTests);
+
+  const btnTestWebRTC = document.getElementById("btn-test-webrtc");
+  if (btnTestWebRTC) {
+    btnTestWebRTC.addEventListener("click", testWebRTCConnectivity);
+  }
 }
 
 async function testCamera() {
@@ -1590,6 +1737,80 @@ function updateNetworkInfo() {
   }
 }
 
+async function testWebRTCConnectivity() {
+  const status = document.getElementById("diag-webrtc");
+  if (!status) return false;
+
+  status.textContent = "Testing...";
+  status.style.color = "var(--accent)";
+
+  try {
+    // Create a test RTCPeerConnection
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+
+    // Create a data channel to trigger ICE gathering
+    pc.createDataChannel("test");
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // Wait for ICE candidates
+    const result = await new Promise((resolve) => {
+      let hasCandidate = false;
+      
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          hasCandidate = true;
+          // Check candidate type
+          const candidateStr = e.candidate.candidate;
+          if (candidateStr.includes("srflx")) {
+            resolve({ success: true, type: "STUN (can connect externally)" });
+          } else if (candidateStr.includes("relay")) {
+            resolve({ success: true, type: "TURN (relay connection)" });
+          }
+        }
+      };
+
+      pc.onicegatheringstatechange = () => {
+        if (pc.iceGatheringState === "complete") {
+          if (hasCandidate) {
+            resolve({ success: true, type: "Host candidates only (may have issues)" });
+          } else {
+            resolve({ success: false, type: "No candidates found" });
+          }
+        }
+      };
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (hasCandidate) {
+          resolve({ success: true, type: "Local only (firewall may block)" });
+        } else {
+          resolve({ success: false, type: "Timeout - blocked by firewall" });
+        }
+      }, 10000);
+    });
+
+    pc.close();
+
+    if (result.success) {
+      status.textContent = `✅ ${result.type}`;
+      status.style.color = "var(--happy)";
+    } else {
+      status.textContent = `❌ ${result.type}`;
+      status.style.color = "var(--angry)";
+    }
+
+    return result.success;
+  } catch (error) {
+    status.textContent = "❌ WebRTC failed: " + error.message;
+    status.style.color = "var(--angry)";
+    return false;
+  }
+}
+
 async function runAllTests() {
   const btn = document.getElementById("btn-run-all-tests");
   btn.disabled = true;
@@ -1598,6 +1819,8 @@ async function runAllTests() {
   await testCamera();
   await new Promise((r) => setTimeout(r, 500));
   await testPeerConnection();
+  await new Promise((r) => setTimeout(r, 500));
+  await testWebRTCConnectivity();
 
   btn.disabled = false;
   btn.textContent = "Run All Tests";
