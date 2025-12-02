@@ -1508,6 +1508,218 @@ body {
     }
 }
 
+/* ============================================
+   DIAGNOSTICS PANEL
+   ============================================ */
+.diagnostics-trigger {
+    margin-top: var(--space-xl);
+    text-align: center;
+}
+
+.btn-diagnostics {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    padding: var(--space-sm) var(--space-lg);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.btn-diagnostics:hover {
+    border-color: var(--primary-dim);
+    color: var(--primary);
+}
+
+.diagnostics-panel {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.diagnostics-content {
+    width: 90%;
+    max-width: 550px;
+    max-height: 85vh;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.diagnostics-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.diagnostics-header h2 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+}
+
+.diagnostics-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.diag-section {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+}
+
+.diag-section h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: var(--space-md);
+    color: var(--text-primary);
+}
+
+.diag-test {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+.diag-status {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+}
+
+.diag-status.success {
+    color: var(--happy);
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.diag-status.error {
+    color: var(--angry);
+    background: rgba(255, 71, 87, 0.1);
+}
+
+.diag-status.testing {
+    color: var(--accent);
+    background: rgba(255, 204, 0, 0.1);
+}
+
+.btn-test {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.btn-test:hover {
+    border-color: var(--primary-dim);
+    color: var(--primary);
+}
+
+.diag-preview {
+    margin-top: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.diag-preview video {
+    width: 100%;
+    max-height: 150px;
+    object-fit: cover;
+    background: var(--bg-primary);
+}
+
+.diag-info {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: var(--space-sm);
+}
+
+.diag-info div {
+    padding: var(--space-xs) 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.diag-info span {
+    color: var(--primary);
+    font-family: monospace;
+}
+
+.diag-issues {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.diag-issues details {
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+}
+
+.diag-issues summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    padding: var(--space-xs) 0;
+}
+
+.diag-issues summary:hover {
+    color: var(--primary);
+}
+
+.diag-issues details p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: var(--space-sm) 0;
+}
+
+.diag-issues details ul {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    padding-left: var(--space-lg);
+    margin: var(--space-sm) 0;
+}
+
+.diag-issues details li {
+    padding: var(--space-xs) 0;
+}
+
+.diagnostics-footer {
+    padding: var(--space-lg);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
     width: 6px;

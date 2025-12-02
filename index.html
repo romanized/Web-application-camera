@@ -107,6 +107,114 @@
                 <label>Your Name</label>
                 <input type="text" id="player-name" maxlength="12" placeholder="Player" value="">
             </div>
+            
+            <!-- Diagnostics Button -->
+            <div class="diagnostics-trigger">
+                <button class="btn-diagnostics" id="btn-diagnostics">
+                    🔧 Connection Diagnostics
+                </button>
+            </div>
+        </div>
+        
+        <!-- Diagnostics Panel -->
+        <div class="diagnostics-panel hidden" id="diagnostics-panel">
+            <div class="diagnostics-content">
+                <div class="diagnostics-header">
+                    <h2>🔧 Connection Diagnostics</h2>
+                    <button class="modal-close" id="diagnostics-close">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="diagnostics-body">
+                    <!-- Camera Test -->
+                    <div class="diag-section">
+                        <h3>📷 Camera Test</h3>
+                        <div class="diag-test">
+                            <div class="diag-status" id="diag-camera-status">Not tested</div>
+                            <button class="btn-test" id="btn-test-camera">Test Camera</button>
+                        </div>
+                        <div class="diag-preview hidden" id="diag-camera-preview">
+                            <video id="diag-video" autoplay muted playsinline></video>
+                        </div>
+                    </div>
+                    
+                    <!-- PeerJS Connection Test -->
+                    <div class="diag-section">
+                        <h3>🌐 PeerJS Server</h3>
+                        <div class="diag-test">
+                            <div class="diag-status" id="diag-peer-status">Not tested</div>
+                            <button class="btn-test" id="btn-test-peer">Test Connection</button>
+                        </div>
+                        <div class="diag-info" id="diag-peer-info"></div>
+                    </div>
+                    
+                    <!-- Network Info -->
+                    <div class="diag-section">
+                        <h3>📡 Network Info</h3>
+                        <div class="diag-info" id="diag-network-info">
+                            <div>Browser: <span id="diag-browser">--</span></div>
+                            <div>Connection: <span id="diag-connection-type">--</span></div>
+                            <div>WebRTC: <span id="diag-webrtc">--</span></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Common Issues -->
+                    <div class="diag-section">
+                        <h3>❓ Common Issues & Fixes</h3>
+                        <div class="diag-issues">
+                            <details>
+                                <summary>🔴 Connection timeout</summary>
+                                <p><strong>Cause:</strong> Firewall/NAT blocking WebRTC</p>
+                                <p><strong>Fixes:</strong></p>
+                                <ul>
+                                    <li>Try a different network (mobile hotspot)</li>
+                                    <li>Disable VPN if active</li>
+                                    <li>School/work networks often block P2P</li>
+                                    <li>Try using the same WiFi network</li>
+                                </ul>
+                            </details>
+                            <details>
+                                <summary>🔴 Room not found</summary>
+                                <p><strong>Cause:</strong> Host left or code is wrong</p>
+                                <p><strong>Fixes:</strong></p>
+                                <ul>
+                                    <li>Double-check the room code</li>
+                                    <li>Make sure host hasn't refreshed</li>
+                                    <li>Create a new room and try again</li>
+                                </ul>
+                            </details>
+                            <details>
+                                <summary>🔴 Camera not working</summary>
+                                <p><strong>Cause:</strong> Permission denied or in use</p>
+                                <p><strong>Fixes:</strong></p>
+                                <ul>
+                                    <li>Allow camera in browser settings</li>
+                                    <li>Close other apps using camera</li>
+                                    <li>Try a different browser</li>
+                                </ul>
+                            </details>
+                            <details>
+                                <summary>🟡 Works on same device, not across</summary>
+                                <p><strong>Cause:</strong> Network blocks P2P connections</p>
+                                <p><strong>Fixes:</strong></p>
+                                <ul>
+                                    <li>School/corporate networks often block this</li>
+                                    <li>Try mobile data or home WiFi</li>
+                                    <li>Use a mobile hotspot</li>
+                                </ul>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="diagnostics-footer">
+                    <button class="btn-primary" id="btn-run-all-tests">Run All Tests</button>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -211,6 +211,9 @@ async function init() {
         // Setup event listeners
         setupEventListeners();
         
+        // Setup diagnostics
+        initDiagnostics();
+        
         // Show lobby
         showLobby();
         
@@ -309,30 +312,9 @@ function initPeer() {
             state.peer = null;
         }
         
+        // Use PeerJS default servers (includes their TURN servers)
         state.peer = new Peer(roomCode, {
-            debug: 2,
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    // Free TURN servers for NAT traversal
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
-                ]
-            }
+            debug: 2
         });
         
         state.peer.on('open', (id) => {
@@ -381,30 +363,9 @@ function connectToPeer(peerId) {
             state.peer = null;
         }
         
+        // Use PeerJS default servers (includes their TURN servers)
         state.peer = new Peer({
-            debug: 2,
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    // Free TURN servers for NAT traversal
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
-                ]
-            }
+            debug: 2
         });
         
         state.peer.on('open', (myId) => {
@@ -1405,6 +1366,165 @@ function setupEventListeners() {
             resizeCanvas();
         }
     });
+}
+
+// ============================================
+// DIAGNOSTICS
+// ============================================
+function initDiagnostics() {
+    const panel = document.getElementById('diagnostics-panel');
+    const btnOpen = document.getElementById('btn-diagnostics');
+    const btnClose = document.getElementById('diagnostics-close');
+    const btnRunAll = document.getElementById('btn-run-all-tests');
+    const btnTestCamera = document.getElementById('btn-test-camera');
+    const btnTestPeer = document.getElementById('btn-test-peer');
+    
+    if (!btnOpen) return;
+    
+    btnOpen.addEventListener('click', () => {
+        panel.classList.remove('hidden');
+        updateNetworkInfo();
+    });
+    
+    btnClose.addEventListener('click', () => {
+        panel.classList.add('hidden');
+        stopDiagVideo();
+    });
+    
+    panel.addEventListener('click', (e) => {
+        if (e.target === panel) {
+            panel.classList.add('hidden');
+            stopDiagVideo();
+        }
+    });
+    
+    btnTestCamera.addEventListener('click', testCamera);
+    btnTestPeer.addEventListener('click', testPeerConnection);
+    btnRunAll.addEventListener('click', runAllTests);
+}
+
+async function testCamera() {
+    const status = document.getElementById('diag-camera-status');
+    const preview = document.getElementById('diag-camera-preview');
+    const video = document.getElementById('diag-video');
+    
+    status.textContent = 'Testing...';
+    status.className = 'diag-status testing';
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        preview.classList.remove('hidden');
+        
+        status.textContent = '✅ Camera working';
+        status.className = 'diag-status success';
+        
+        // Auto-stop after 10 seconds
+        setTimeout(() => stopDiagVideo(), 10000);
+        
+        return true;
+    } catch (error) {
+        status.textContent = '❌ ' + (error.name === 'NotAllowedError' ? 'Permission denied' : error.message);
+        status.className = 'diag-status error';
+        preview.classList.add('hidden');
+        return false;
+    }
+}
+
+function stopDiagVideo() {
+    const video = document.getElementById('diag-video');
+    if (video && video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+    }
+}
+
+async function testPeerConnection() {
+    const status = document.getElementById('diag-peer-status');
+    const info = document.getElementById('diag-peer-info');
+    
+    status.textContent = 'Connecting...';
+    status.className = 'diag-status testing';
+    info.innerHTML = '';
+    
+    try {
+        const testPeer = new Peer({
+            debug: 0
+        });
+        
+        const result = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                testPeer.destroy();
+                reject(new Error('Connection timeout'));
+            }, 10000);
+            
+            testPeer.on('open', (id) => {
+                clearTimeout(timeout);
+                resolve({ id, peer: testPeer });
+            });
+            
+            testPeer.on('error', (err) => {
+                clearTimeout(timeout);
+                reject(err);
+            });
+        });
+        
+        status.textContent = '✅ Connected to PeerJS';
+        status.className = 'diag-status success';
+        info.innerHTML = `<div>Your ID: <span>${result.id}</span></div>`;
+        
+        // Clean up
+        result.peer.destroy();
+        
+        return true;
+    } catch (error) {
+        status.textContent = '❌ ' + error.message;
+        status.className = 'diag-status error';
+        info.innerHTML = '<div style="color: var(--angry);">PeerJS server unreachable. Check internet connection.</div>';
+        return false;
+    }
+}
+
+function updateNetworkInfo() {
+    // Browser info
+    const browser = document.getElementById('diag-browser');
+    const ua = navigator.userAgent;
+    if (ua.includes('Chrome')) browser.textContent = 'Chrome';
+    else if (ua.includes('Firefox')) browser.textContent = 'Firefox';
+    else if (ua.includes('Safari')) browser.textContent = 'Safari';
+    else if (ua.includes('Edge')) browser.textContent = 'Edge';
+    else browser.textContent = 'Unknown';
+    
+    // Connection type
+    const connType = document.getElementById('diag-connection-type');
+    if (navigator.connection) {
+        connType.textContent = navigator.connection.effectiveType || 'Unknown';
+    } else {
+        connType.textContent = 'N/A';
+    }
+    
+    // WebRTC support
+    const webrtc = document.getElementById('diag-webrtc');
+    if (window.RTCPeerConnection) {
+        webrtc.textContent = 'Supported ✅';
+        webrtc.style.color = 'var(--happy)';
+    } else {
+        webrtc.textContent = 'Not supported ❌';
+        webrtc.style.color = 'var(--angry)';
+    }
+}
+
+async function runAllTests() {
+    const btn = document.getElementById('btn-run-all-tests');
+    btn.disabled = true;
+    btn.textContent = 'Running tests...';
+    
+    await testCamera();
+    await new Promise(r => setTimeout(r, 500));
+    await testPeerConnection();
+    
+    btn.disabled = false;
+    btn.textContent = 'Run All Tests';
 }
 
 // ============================================
